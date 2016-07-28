@@ -127,6 +127,18 @@ func Parse(data []byte, v interface{}) error {
 	return nil
 }
 
+func Fault(faultcode, faultstring, faultactor string) string {
+	return fmt.Sprintf(`<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+							<soapenv:Body>
+								<soapenv:Fault>
+									<faultcode>%s</faultcode>
+									<faultstring>%s</faultstring>
+									<faultactor>%s</faultactor>
+								</soapenv:Fault>
+							</soapenv:Body>
+						</soapenv:Envelope>`, faultcode, faultstring, faultactor)
+}
+
 func Serialize(header, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
 	envelope := SOAPEnvelope{Ns1: ns1, Ns2: ns2, Ns3: ns3}
 
