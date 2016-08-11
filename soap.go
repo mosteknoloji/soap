@@ -162,7 +162,7 @@ func Serialize(header, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, e
 	return buff, nil
 }
 
-func (s *SOAPClient) Call(path string, header, request, response interface{}, ns1, ns2, ns3 string) error {
+func (s *SOAPClient) Call(path, action string, header, request, response interface{}, ns1, ns2, ns3 string) error {
 	buffer, err := Serialize(header, request, ns1, ns2, ns3)
 	if err != nil {
 		return err
@@ -177,6 +177,9 @@ func (s *SOAPClient) Call(path string, header, request, response interface{}, ns
 	}
 
 	req.Header.Add("Content-Type", "text/xml; charset=\"utf-8\"")
+	if action != "" {
+	   req.Header.Add("SOAPAction", action)
+	}
 
 	req.Header.Set("User-Agent", "Go 1.6.2")
 	req.Close = true
