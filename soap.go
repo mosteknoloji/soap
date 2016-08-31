@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	//	"log"
 	"net"
 	"net/http"
 	"time"
@@ -21,23 +22,47 @@ func dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, timeout)
 }
 
-type SOAPEnvelope struct {
+type RequestSOAPEnvelope struct {
+	XMLName xml.Name `xml:"soapenv:Envelope"`
+	SoapENV string   `xml:"xmlns:soapenv,attr,omitempty"`
+	Ns1     string   `xml:"xmlns:ns1,attr,omitempty"`
+	Ns2     string   `xml:"xmlns:ns2,attr,omitempty"`
+	Ns3     string   `xml:"xmlns:ns3,attr,omitempty"`
+
+	Header RequestSOAPHeader
+	Body   RequestSOAPBody
+}
+
+type RequestSOAPHeader struct {
+	XMLName xml.Name `xml:"soapenv:Header"`
+
+	Header interface{}
+}
+
+type RequestSOAPBody struct {
+	XMLName xml.Name `xml:"soapenv:Body"`
+
+	Fault   *SOAPFault  `xml:",omitempty"`
+	Content interface{} `xml:",omitempty"`
+}
+
+type ResponseSOAPEnvelope struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
 	Ns1     string   `xml:"xmlns:ns1,attr,omitempty"`
 	Ns2     string   `xml:"xmlns:ns2,attr,omitempty"`
 	Ns3     string   `xml:"xmlns:ns3,attr,omitempty"`
 
-	Header SOAPHeader
-	Body   SOAPBody
+	Header ResponseSOAPHeader
+	Body   ResponseSOAPBody
 }
 
-type SOAPHeader struct {
+type ResponseSOAPHeader struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
 
 	Header interface{}
 }
 
-type SOAPBody struct {
+type ResponseSOAPBody struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 
 	Fault   *SOAPFault  `xml:",omitempty"`
@@ -49,7 +74,7 @@ type SOAPClient struct {
 	tls  bool
 }
 
-func (b *SOAPBody) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+func (b *ResponseSOAPBody) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	if b.Content == nil {
 		return xml.UnmarshalError("Content must be a pointer to a struct")
 	}
@@ -115,8 +140,8 @@ func ParseFromRequest(req *http.Request, v interface{}) error {
 }
 
 func Parse(data []byte, v interface{}) error {
-	env := new(SOAPEnvelope)
-	env.Body = SOAPBody{Content: v}
+	env := new(ResponseSOAPEnvelope)
+	env.Body = ResponseSOAPBody{Content: v}
 	if err := xml.Unmarshal(data, env); err != nil {
 		return err
 	}
@@ -140,10 +165,10 @@ func Fault(faultcode, faultstring, faultactor string) string {
 }
 
 func Serialize(header, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
-	envelope := SOAPEnvelope{Ns1: ns1, Ns2: ns2, Ns3: ns3}
+	envelope := RequestSOAPEnvelope{SoapENV: "http://schemas.xmlsoap.org/soap/envelope/", Ns1: ns1, Ns2: ns2, Ns3: ns3}
 
 	if header != nil {
-		envelope.Header = SOAPHeader{Header: header}
+		envelope.Header = RequestSOAPHeader{Header: header}
 	}
 
 	envelope.Body.Content = body
@@ -168,7 +193,7 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return err
 	}
 
-	//log.Println(buffer.String())
+	//	log.Println(buffer.String())
 	url := fmt.Sprintf("%s%s", s.base, path)
 
 	req, err := http.NewRequest("POST", url, buffer)
@@ -178,7 +203,7 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 
 	req.Header.Add("Content-Type", "text/xml; charset=\"utf-8\"")
 	if action != "" {
-	   req.Header.Add("SOAPAction", action)
+		req.Header.Add("SOAPAction", action)
 	}
 
 	req.Header.Set("User-Agent", "Go 1.6.2")
@@ -203,11 +228,11 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return err
 	}
 	if len(rawbody) == 0 {
-		//log.Println("empty response")
+		//		log.Println("empty response")
 		return nil
 	}
 
-	//log.Println(string(rawbody))
+	//	log.Println(string(rawbody))
 	if err := Parse(rawbody, response); err != nil {
 		return err
 	}
