@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
-	//	"log"
 	"net"
 	"net/http"
 	"time"
@@ -193,7 +193,8 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return err
 	}
 
-	//	log.Println(buffer.String())
+	debugPrintXml("Request:", []byte(buffer.String()))
+
 	url := fmt.Sprintf("%s%s", s.base, path)
 
 	req, err := http.NewRequest("POST", url, buffer)
@@ -228,13 +229,46 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return err
 	}
 	if len(rawbody) == 0 {
-		//		log.Println("empty response")
+		//log.Println("empty response")
 		return nil
 	}
 
-	//	log.Println(string(rawbody))
+	debugPrintXml("Response:", rawbody)
+
 	if err := Parse(rawbody, response); err != nil {
 		return err
 	}
 	return nil
+}
+
+func formatXML(data []byte) ([]byte, error) {
+	b := &bytes.Buffer{}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	encoder := xml.NewEncoder(b)
+	encoder.Indent("", "  ")
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			encoder.Flush()
+			return b.Bytes(), nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		err = encoder.EncodeToken(token)
+		if err != nil {
+			return nil, err
+		}
+	}
+}
+
+func debugPrintXml(info string, data []byte) {
+	fmt.Println()
+	fmt.Println("************************************************************************************")
+	fmt.Println(info)
+	b, _ := formatXML(data)
+	fmt.Println(string(b))
+	fmt.Println()
+	fmt.Println("************************************************************************************")
+	fmt.Println()
 }
