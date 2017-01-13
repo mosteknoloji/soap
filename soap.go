@@ -70,8 +70,9 @@ type ResponseSOAPBody struct {
 }
 
 type SOAPClient struct {
-	base string
-	tls  bool
+	base  string
+	tls   bool
+	debug bool
 }
 
 func (b *ResponseSOAPBody) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -124,10 +125,11 @@ Loop:
 	return nil
 }
 
-func NewSOAPClient(base string, tls bool) *SOAPClient {
+func NewSOAPClient(base string, tls bool, debug bool) *SOAPClient {
 	return &SOAPClient{
-		base: base,
-		tls:  tls,
+		base:  base,
+		tls:   tls,
+		debug: debug,
 	}
 }
 
@@ -193,7 +195,9 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return err
 	}
 
-	debugPrintXml("Request:", []byte(buffer.String()))
+	if s.debug {
+		debugPrintXml("Request:", []byte(buffer.String()))
+	}
 
 	url := fmt.Sprintf("%s%s", s.base, path)
 
@@ -233,7 +237,9 @@ func (s *SOAPClient) Call(path, action string, header, request, response interfa
 		return nil
 	}
 
-	debugPrintXml("Response:", rawbody)
+	if s.debug {
+		debugPrintXml("Response:", rawbody)
+	}
 
 	if err := Parse(rawbody, response); err != nil {
 		return err
