@@ -36,7 +36,7 @@ type RequestSOAPEnvelope struct {
 type RequestSOAPHeader struct {
 	XMLName xml.Name `xml:"soapenv:Header"`
 
-	Header interface{}
+	Header []interface{}
 }
 
 type RequestSOAPBody struct {
@@ -166,7 +166,7 @@ func Fault(faultcode, faultstring, faultactor string) string {
 						</soapenv:Envelope>`, faultcode, faultstring, faultactor)
 }
 
-func Serialize(header, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
+func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
 	envelope := RequestSOAPEnvelope{SoapENV: "http://schemas.xmlsoap.org/soap/envelope/", Ns1: ns1, Ns2: ns2, Ns3: ns3}
 
 	if header != nil {
