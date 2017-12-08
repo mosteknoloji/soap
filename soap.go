@@ -189,7 +189,7 @@ func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*b
 	return buff, nil
 }
 
-func (s *SOAPClient) Call(path, action string, header, request, response interface{}, ns1, ns2, ns3 string) error {
+func (s *SOAPClient) Call(path, action string, header []interface{}, request, response, ns1, ns2, ns3 string) error {
 	buffer, err := Serialize(header, request, ns1, ns2, ns3)
 	if err != nil {
 		return err
