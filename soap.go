@@ -3,6 +3,7 @@ package soap
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -73,6 +74,9 @@ type SOAPClient struct {
 	base  string
 	tls   bool
 	debug bool
+	// Basic Authentication if needed
+	username string
+	password string
 }
 
 func (b *ResponseSOAPBody) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -189,6 +193,16 @@ func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*b
 	return buff, nil
 }
 
+func (s *SOAPClient) SetBasicAuth(username string, password string) {
+	s.username = username
+	s.password = password
+}
+
+func basicAuth(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
 func (s *SOAPClient) Call(path, action string, header []interface{}, request, response interface{}, ns1, ns2, ns3 string) error {
 	buffer, err := Serialize(header, request, ns1, ns2, ns3)
 	if err != nil {
@@ -213,6 +227,10 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 
 	req.Header.Set("User-Agent", "Go 1.6.2")
 	req.Close = true
+
+	if s.username != "" {
+		req.Header.Set("Authorization", "Basic "+basicAuth(s.username, s.password))
+	}
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
