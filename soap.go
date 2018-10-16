@@ -170,7 +170,7 @@ func Fault(faultcode, faultstring, faultactor string) string {
 						</soapenv:Envelope>`, faultcode, faultstring, faultactor)
 }
 
-func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
+func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) ([]byte, error) {
 	envelope := RequestSOAPEnvelope{SoapENV: "http://schemas.xmlsoap.org/soap/envelope/", Ns1: ns1, Ns2: ns2, Ns3: ns3}
 
 	if header != nil {
@@ -178,18 +178,23 @@ func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*b
 	}
 
 	envelope.Body.Content = body
-	buff := new(bytes.Buffer)
-
-	encoder := xml.NewEncoder(buff)
-
-	if err := encoder.Encode(envelope); err != nil {
+	buff, err := xml.Marshal(envelope)
+	if err != nil {
 		return nil, err
 	}
+	/*
+		buff := new(bytes.Buffer)
 
-	if err := encoder.Flush(); err != nil {
-		return nil, err
-	}
+		encoder := xml.NewEncoder(buff)
 
+		if err := encoder.Encode(envelope); err != nil {
+			return nil, err
+		}
+
+		if err := encoder.Flush(); err != nil {
+			return nil, err
+		}
+	*/
 	return buff, nil
 }
 
@@ -210,12 +215,12 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 	}
 
 	if s.debug {
-		debugPrintXml("Request:", []byte(buffer.String()))
+		debugPrintXml("Request:", buffer)
 	}
 
 	url := fmt.Sprintf("%s%s", s.base, path)
 
-	req, err := http.NewRequest("POST", url, buffer)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(buffer))
 	if err != nil {
 		return err
 	}
