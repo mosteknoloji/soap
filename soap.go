@@ -48,7 +48,7 @@ type RequestSOAPBody struct {
 }
 
 type ResponseSOAPEnvelope struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
+	XMLName xml.Name `xml:"Envelope"`
 	Ns1     string   `xml:"xmlns:ns1,attr,omitempty"`
 	Ns2     string   `xml:"xmlns:ns2,attr,omitempty"`
 	Ns3     string   `xml:"xmlns:ns3,attr,omitempty"`
@@ -58,13 +58,13 @@ type ResponseSOAPEnvelope struct {
 }
 
 type ResponseSOAPHeader struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
+	XMLName xml.Name `xml:"Header"`
 
 	Header interface{}
 }
 
 type ResponseSOAPBody struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
+	XMLName xml.Name `xml:"Body"`
 
 	Fault   *SOAPFault  `xml:",omitempty"`
 	Content interface{} `xml:",omitempty"`
