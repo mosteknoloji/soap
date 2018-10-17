@@ -77,6 +77,9 @@ type SOAPClient struct {
 	// Basic Authentication if needed
 	username string
 	password string
+
+	userAgent   string
+	contentType string
 }
 
 func (b *ResponseSOAPBody) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -170,8 +173,11 @@ func Fault(faultcode, faultstring, faultactor string) string {
 						</soapenv:Envelope>`, faultcode, faultstring, faultactor)
 }
 
-func Serialize(header []interface{}, body interface{}, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
-	envelope := RequestSOAPEnvelope{SoapENV: "http://schemas.xmlsoap.org/soap/envelope/", Ns1: ns1, Ns2: ns2, Ns3: ns3}
+func Serialize(header []interface{}, body interface{}, nsHeader, ns1, ns2, ns3 string) (*bytes.Buffer, error) {
+	if nsHeader == "" {
+		nsHeader = "http://schemas.xmlsoap.org/soap/envelope/"
+	}
+	envelope := RequestSOAPEnvelope{SoapENV: nsHeader, Ns1: ns1, Ns2: ns2, Ns3: ns3}
 
 	if header != nil {
 		envelope.Header = RequestSOAPHeader{Header: header}
@@ -198,13 +204,21 @@ func (s *SOAPClient) SetBasicAuth(username string, password string) {
 	s.password = password
 }
 
+func (s *SOAPClient) SetUserAgent(useragent string) {
+	s.userAgent = useragent
+}
+
+func (s *SOAPClient) SetContentType(contentType string) {
+	s.contentType = contentType
+}
+
 func basicAuth(username, password string) string {
 	auth := username + ":" + password
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func (s *SOAPClient) Call(path, action string, header []interface{}, request, response interface{}, ns1, ns2, ns3 string) error {
-	buffer, err := Serialize(header, request, ns1, ns2, ns3)
+func (s *SOAPClient) Call(path, action string, header []interface{}, request, response interface{}, nsHeader, ns1, ns2, ns3 string) error {
+	buffer, err := Serialize(header, request, nsHeader, ns1, ns2, ns3)
 	if err != nil {
 		return err
 	}
@@ -220,12 +234,22 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		return err
 	}
 
-	req.Header.Add("Content-Type", "text/xml; charset=\"utf-8\"")
+	if s.contentType != "" {
+		req.Header.Add("Content-Type", s.contentType)
+	} else {
+		req.Header.Add("Content-Type", "text/xml; charset=\"utf-8\"")
+	}
+
 	if action != "" {
 		req.Header.Add("SOAPAction", action)
 	}
 
-	req.Header.Set("User-Agent", "Go 1.6.2")
+	if s.userAgent != "" {
+		req.Header.Set("User-Agent", s.userAgent)
+	} else {
+		req.Header.Set("User-Agent", "Go")
+	}
+
 	req.Close = true
 
 	if s.username != "" {
