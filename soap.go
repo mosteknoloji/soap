@@ -263,7 +263,12 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		Dial: dialTimeout,
 	}
 
-	client := &http.Client{Transport: tr}
+	client := &http.Client{
+		Transport: tr,
+		// By default http.client doesn't timeout
+		// Source: https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
+		Timeout: 2 * timeout,
+	}
 	res, err := client.Do(req)
 	if err != nil {
 		return err
