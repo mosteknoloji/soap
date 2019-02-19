@@ -19,10 +19,6 @@ var _ xml.Name
 
 var timeout = time.Duration(30 * time.Second)
 
-func dialTimeout(network, addr string) (net.Conn, error) {
-	return net.DialTimeout(network, addr, timeout)
-}
-
 type RequestSOAPEnvelope struct {
 	XMLName xml.Name `xml:"soapenv:Envelope"`
 	SoapENV string   `xml:"xmlns:soapenv,attr,omitempty"`
@@ -260,7 +256,9 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: s.tls,
 		},
-		Dial: dialTimeout,
+		DialContext: (&net.Dialer{
+			Timeout: timeout,
+		}).DialContext,
 	}
 
 	client := &http.Client{
@@ -280,7 +278,7 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		return err
 	}
 	if len(rawbody) == 0 {
-		//log.Println("empty response")
+		// log.Println("empty response")
 		return nil
 	}
 
