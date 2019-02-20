@@ -19,10 +19,6 @@ var _ xml.Name
 
 var timeout = time.Duration(30 * time.Second)
 
-func dialTimeout(network, addr string) (net.Conn, error) {
-	return net.DialTimeout(network, addr, timeout)
-}
-
 type RequestSOAPEnvelope struct {
 	XMLName xml.Name `xml:"soapenv:Envelope"`
 	SoapENV string   `xml:"xmlns:soapenv,attr,omitempty"`
@@ -260,10 +256,21 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: s.tls,
 		},
-		Dial: dialTimeout,
+
+		// Dial timeout limits the time spent establishing a TCP connection (if a new one is needed). [1]
+		// [1] https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+		DialContext: (&net.Dialer{
+			Timeout: timeout,
+		}).DialContext,
 	}
 
-	client := &http.Client{Transport: tr}
+	client := &http.Client{
+		Transport: tr,
+		// By default http.client doesn't timeout [2]
+		// [2] https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
+		// http.Client.Timeout includes all time spent following redirects, while the granular timeouts are specific for each request, since http.Transport is a lower level system that has no concept of redirects. [1
+		Timeout: 3 * timeout,
+	}
 	res, err := client.Do(req)
 	if err != nil {
 		return err
@@ -275,7 +282,7 @@ func (s *SOAPClient) Call(path, action string, header []interface{}, request, re
 		return err
 	}
 	if len(rawbody) == 0 {
-		//log.Println("empty response")
+		// log.Println("empty response")
 		return nil
 	}
 
